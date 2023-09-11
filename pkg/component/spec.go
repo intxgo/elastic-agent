@@ -131,10 +131,11 @@ func (t *ServiceTimeoutSpec) InitDefaults() {
 
 // ServiceSpec is the specification for an input that executes as a service.
 type ServiceSpec struct {
-	CPort      int                   `config:"cport" yaml:"cport" validate:"required"`
-	Log        *ServiceLogSpec       `config:"log,omitempty" yaml:"log,omitempty"`
-	Operations ServiceOperationsSpec `config:"operations" yaml:"operations" validate:"required"`
-	Timeouts   ServiceTimeoutSpec    `config:"timeouts,omitempty" yaml:"timeouts,omitempty"`
+	CPort          int                   `config:"cport" yaml:"cport" validate:"required"`
+	Log            *ServiceLogSpec       `config:"log,omitempty" yaml:"log,omitempty"`
+	DiagnosticsZip *ServiceLogSpec       `config:"diagnostics_zip,omitempty" yaml:"diagnostics_zip,omitempty"`
+	Operations     ServiceOperationsSpec `config:"operations" yaml:"operations" validate:"required"`
+	Timeouts       ServiceTimeoutSpec    `config:"timeouts,omitempty" yaml:"timeouts,omitempty"`
 }
 
 // ServiceLogSpec is the specification for the log path that the service logs to.
@@ -144,9 +145,10 @@ type ServiceLogSpec struct {
 
 // ServiceOperationsSpec is the specification of the operations that need to be performed to get a service installed/uninstalled.
 type ServiceOperationsSpec struct {
-	Check     *ServiceOperationsCommandSpec `config:"check,omitempty" yaml:"check,omitempty"`
-	Install   *ServiceOperationsCommandSpec `config:"install" yaml:"install" validate:"required"`
-	Uninstall *ServiceOperationsCommandSpec `config:"uninstall" yaml:"uninstall" validate:"required"`
+	Check       *ServiceOperationsCommandSpec `config:"check,omitempty" yaml:"check,omitempty"`
+	Diagnostics *ServiceOperationsCommandSpec `config:"diagnostics,omitempty" yaml:"diagnostics,omitempty"`
+	Install     *ServiceOperationsCommandSpec `config:"install" yaml:"install" validate:"required"`
+	Uninstall   *ServiceOperationsCommandSpec `config:"uninstall" yaml:"uninstall" validate:"required"`
 }
 
 // ServiceOperationsCommandSpec is the specification for execution of binaries to perform the check, install, and uninstall.

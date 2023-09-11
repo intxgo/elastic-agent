@@ -19,13 +19,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent/pkg/control/v2/client"
+	"github.com/elastic/elastic-agent/pkg/core/logger"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/elastic/elastic-agent/internal/pkg/agent/application/paths"
+	"github.com/elastic/elastic-agent/internal/pkg/capabilities"
+	"github.com/elastic/elastic-agent/internal/pkg/config"
+	"github.com/elastic/elastic-agent/internal/pkg/config/operations"
 	"github.com/elastic/elastic-agent/internal/pkg/release"
 	"github.com/elastic/elastic-agent/pkg/component"
+	compruntime "github.com/elastic/elastic-agent/pkg/component/runtime"
 	"github.com/elastic/elastic-agent/version"
 )
 
@@ -427,7 +433,13 @@ func zipLogsWithPath(pathsHome, commitName string, collectServices bool, zw *zip
 
 	if collectServices {
 		if err := collectServiceComponentsLogs(zw); err != nil {
-			return fmt.Errorf("failed to collect endpoint-security logs: %w", err)
+			return fmt.Errorf("failed to collect service components logs: %w", err)
+		}
+	}
+
+	if collectServices {
+		if err := collectServiceComponentsDiagnostics(zw); err != nil {
+			return fmt.Errorf("failed to collect service components diagnostics: %w", err)
 		}
 	}
 
@@ -473,6 +485,86 @@ func zipLogsWithPath(pathsHome, commitName string, collectServices bool, zw *zip
 
 		return saveLogs(name, path, zw)
 	})
+}
+
+func serviceComponentsFromConfig(specs component.RuntimeSpecs, cfg *config.Config) ([]component.Component, error) {
+	mm, err := cfg.ToMapStr()
+	if err != nil {
+		return nil, errors.New("failed to create a map from config")
+	}
+	allComps, err := specs.ToComponents(mm, nil, logp.InfoLevel, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render components: %w", err)
+	}
+	var serviceComps []component.Component
+	for _, comp := range allComps {
+		if comp.Err == nil && comp.InputSpec != nil && comp.InputSpec.Spec.Service != nil {
+			// non-error and service based component
+			serviceComps = append(serviceComps, comp)
+		}
+	}
+	return serviceComps, nil
+}
+
+func collectServiceComponentsDiagnostics(zw *zip.Writer) error {
+	platform, err := component.LoadPlatformDetail()
+	if err != nil {
+		return fmt.Errorf("failed to gather system information: %w", err)
+	}
+	specs, err := component.LoadRuntimeSpecs(paths.Components(), platform)
+	if err != nil {
+		return fmt.Errorf("failed to detect inputs and outputs: %w", err)
+	}
+
+	log, err := logger.NewWithLogpLevel("", logp.ErrorLevel, false)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	cfgFile := paths.ConfigFile()
+
+	cfg, err := operations.LoadFullAgentConfig(ctx, log, cfgFile, false)
+	if err != nil {
+		return err
+	}
+
+	comps, err := serviceComponentsFromConfig(specs, cfg)
+	if err != nil {
+		return err
+	}
+
+	// check caps so we don't try to collect diagnostics from services we
+	// prevented from installing
+	caps, err := capabilities.LoadFile(paths.AgentCapabilitiesPath(), log)
+	if err != nil {
+		return fmt.Errorf("error checking capabilities: %w", err)
+	}
+
+	for _, comp := range comps {
+		if !caps.AllowInput(comp.InputType) || !caps.AllowOutput(comp.OutputType) {
+			// This component is not active
+			continue
+		}
+
+		if comp.InputSpec.Spec.Service.DiagnosticsZip == nil || comp.InputSpec.Spec.Service.DiagnosticsZip.Path == "" {
+			// no diagnostics path set in specification
+			continue
+		}
+
+		name := filepath.Base(comp.InputSpec.Spec.Service.DiagnosticsZip.Path)
+		if filepath.Ext(name) != ".zip" {
+			return fmt.Errorf("failed to extract diagnostics zip name from service component %q spec", comp.ID)
+		}
+
+		if err := compruntime.GatherDiagnostics(ctx, log, comp); err != nil {
+			return fmt.Errorf("failed to gather diagnostics from service component %q: %s\n", comp.ID, err)
+		}
+
+		saveLogs("services/"+name, comp.InputSpec.Spec.Service.DiagnosticsZip.Path, zw)
+	}
+
+	return nil
 }
 
 func collectServiceComponentsLogs(zw *zip.Writer) error {

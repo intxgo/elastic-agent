@@ -22,8 +22,8 @@ inputs:
           message: "Elastic Defend requires Elastic Agent be installed at the default installation path"
     service: &service
       cport: 6788
-      log:
-        path: "/opt/Elastic/Endpoint/state/log/endpoint-*.log"
+      diagnostics_zip:
+        path: "/opt/Elastic/Endpoint/cache/elastic-defend-diagnostics.zip"
       operations: &operations
         check:
           args:
@@ -47,6 +47,13 @@ inputs:
             - "stderr"
             - "--uninstall-token"
           timeout: 600s
+        diagnostics:
+          args:
+            - "diagnostics"
+            - "--for-stack"
+            - "--log"
+            - "stderr"
+          timeout: 600s
   - name: endpoint
     description: "Endpoint Security"
     platforms:
@@ -62,8 +69,8 @@ inputs:
           message: "Elastic Defend requires Elastic Agent be installed at the default installation path"
     service:
       cport: 6788
-      log:
-        path: "/Library/Elastic/Endpoint/state/log/endpoint-*.log"
+      diagnostics_zip:
+        path: "/Library/Elastic/Endpoint/cache/elastic-defend-diagnostics.zip"
       operations: *operations
   - name: endpoint
     description: "Endpoint Security"
@@ -81,8 +88,8 @@ inputs:
           message: "Elastic Defend requires Elastic Agent be installed at the default installation path"
     service:
       cport: 6788
-      log:
-        path: "C:\\Program Files\\Elastic\\Endpoint\\state\\log\\endpoint-*.log"
+      diagnostics_zip:
+        path: "C:\\Program Files\\Elastic\\Endpoint\\cache\\elastic-defend-diagnostics.zip"
       operations: *operations
   - name: endpoint
     description: "Endpoint Security"

@@ -608,6 +608,11 @@ func (s *serviceRuntime) uninstall(ctx context.Context) error {
 	return uninstallService(ctx, s.log, s.comp, "", s.executeServiceCommandImpl)
 }
 
+// ServiceDiagnostics executes service diagnostics.
+func GatherDiagnostics(ctx context.Context, log *logger.Logger, comp component.Component) error {
+	return gatherDiagnostics(ctx, log, comp, executeServiceCommand)
+}
+
 // UninstallService uninstalls the service. When shouldRetry is true the uninstall command will be retried until it succeeds.
 func UninstallService(ctx context.Context, log *logger.Logger, comp component.Component, uninstallToken string) error {
 	return uninstallService(ctx, log, comp, uninstallToken, executeServiceCommand)
@@ -659,4 +664,14 @@ func uninstallService(ctx context.Context, log *logger.Logger, comp component.Co
 
 	log.Debugf("uninstall %s service", comp.InputSpec.BinaryName)
 	return executeServiceCommandImpl(ctx, log, comp.InputSpec.BinaryPath, uninstallSpec)
+}
+
+func gatherDiagnostics(ctx context.Context, log *logger.Logger, comp component.Component, executeServiceCommandImpl executeServiceCommandFunc) error {
+	if comp.InputSpec.Spec.Service.Operations.Diagnostics == nil {
+		log.Debugf("no diagnostics spec for %s service", comp.InputSpec.BinaryName)
+		return ErrOperationSpecUndefined
+	}
+
+	log.Debugf("gather diagnostics from %s service", comp.InputSpec.BinaryName)
+	return executeServiceCommandImpl(ctx, log, comp.InputSpec.BinaryPath, comp.InputSpec.Spec.Service.Operations.Diagnostics)
 }

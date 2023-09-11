@@ -159,9 +159,13 @@ The TCP port on localhost where the service listens for connections from Agent.
 
 The path to this service's logs directory.
 
+#### `service.diagnostics_zip.path` (string)
+
+The path to this service's diagnostics zip.
+
 #### `service.operations`  (required)
 
-`operations` gives instructions for performing three operations: `check`, `install`, and `uninstall`. Each of these operations has its own subconfiguration with the following fields:
+`operations` gives instructions for performing three required operations: `check`, `install`, and `uninstall`. In addition a service may optionally priovide `diagnostics` operation. Each of these operations has its own subconfiguration with the following fields:
 
 - `args` (identical to `command.args`): the command-line arguments to pass for this operation
 - `env` (identical to `command.env`): the environment variables to set for this operation
@@ -186,6 +190,10 @@ operations:
   uninstall:
     args:
       - "uninstall"
+    timeout: 600
+  diagnostics:
+    args:
+      - "diagnostics"
     timeout: 600
 ```
 
