@@ -99,7 +99,7 @@ func Notice() (err error) {
 	}
 	defer f.Close()
 
-	out, err := os.OpenFile(outfn, os.O_RDONLY|os.O_APPEND, 0644)
+	out, err := os.OpenFile(outfn, os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", outfn, err)
 	}
