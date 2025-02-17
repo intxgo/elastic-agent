@@ -99,7 +99,7 @@ func Notice() (err error) {
 	}
 	defer f.Close()
 
-	out, err := os.OpenFile(outfn, os.O_RDWR|os.O_APPEND, 0644)
+	out, err := os.OpenFile(outfn, os.O_RDONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", outfn, err)
 	}
@@ -118,9 +118,7 @@ func Notice() (err error) {
 	// dos2unix NOTICE.txt
 	fmt.Printf(">> %s\n", "dos2unix NOTICE.txt")
 
-	// Read the entire file content into memory
-	out.Seek(0, io.SeekStart)
-	content, err := io.ReadAll(out)
+	content, err := os.ReadFile(outfn)
 	if err != nil {
 		return fmt.Errorf("failed to read entire file %s: %w", outfn, err)
 	}
@@ -128,12 +126,9 @@ func Notice() (err error) {
 	// Convert Windows-style line endings to Unix-style
 	newContent := strings.ReplaceAll(string(content), "\r\n", "\n")
 
-	// Write the updated content back to the file
-	out.Seek(0, io.SeekStart)
-	out.Truncate(0)
-	_, err = out.Write([]byte(newContent))
+	err = os.WriteFile(outfn, []byte(newContent), 0644)
 	if err != nil {
-		return fmt.Errorf("failed to write Unix-style line endings converted content to file %s: %w", outfn, err)
+		return fmt.Errorf("failed to rewrite file using Unix-style line endings %s: %w", outfn, err)
 	}
 
 	return nil
